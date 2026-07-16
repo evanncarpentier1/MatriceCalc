@@ -4,12 +4,11 @@ import sympy as sp
 # --- INTERFACE WEB STREAMLIT ---
 st.set_page_config(page_title="Solveur Insa", layout="centered")
 
-# --- OPTION B : NETTOYAGE POUR LE PDF ---
-# Ce code cache l'interface Streamlit au moment de l'impression
+# --- CSS POUR UN PDF PARFAIT VIA CTRL+P ---
 st.markdown("""
     <style>
     @media print {
-        header, .stSelectbox, .stTextArea, .stButton, footer {
+        header, .stSelectbox, .stTextArea, .stButton, footer, .stAlert {
             display: none !important;
         }
     }
@@ -26,15 +25,13 @@ def gauss_jordan_historique(M):
     r = 0 
     
     for c in range(colonnes):
-        if r >= lignes:
-            break
+        if r >= lignes: break
             
         pivot_row = r
         while pivot_row < lignes and A[pivot_row, c] == 0:
             pivot_row += 1
             
-        if pivot_row == lignes:
-            continue
+        if pivot_row == lignes: continue
             
         if pivot_row != r:
             A.row_swap(r, pivot_row)
@@ -56,7 +53,6 @@ def gauss_jordan_historique(M):
                 val_absolue = sp.latex(abs(facteur))
                 op = f"L_{i+1} \\leftarrow L_{i+1} {signe} {val_absolue} L_{r+1}"
                 etapes.append((op, A.copy()))
-        
         r += 1
     return A, etapes
 
@@ -76,7 +72,8 @@ def diagonaliser_historique(M):
     vecteurs_propres = M.eigenvects()
     
     for vp, mult, vects in vecteurs_propres:
-        texte_vp = f"Sous-espace propre pour \\lambda = {sp.latex(vp)} (multiplicité {mult})"
+        # CORRECTION ICI : Ajout des symboles $ pour forcer le rendu LaTeX mathématique
+        texte_vp = f"Sous-espace propre pour $\\lambda = {sp.latex(vp)}$ (multiplicité {mult})"
         matrice_vects = sp.Matrix.hstack(*vects)
         etapes.append((texte_vp, matrice_vects))
         
@@ -116,11 +113,9 @@ if st.button("Lancer le calcul"):
         
         if choix.startswith("1") or choix.startswith("3"):
             M_reduite, historique = gauss_jordan_historique(M)
-            
             for description, matrice in historique:
                 st.write(f"**{description}**" if "L_" not in str(description) else f"Opération : ${description}$")
                 st.latex(sp.latex(matrice))
-                
             st.success("Calcul terminé avec succès !")
             succes = True
 
@@ -130,12 +125,10 @@ if st.button("Lancer le calcul"):
             else:
                 M_aug = M.row_join(sp.eye(lignes))
                 M_reduite, historique = gauss_jordan_historique(M_aug)
-                
                 for description, matrice in historique:
                     st.write(f"**{description}**" if "L_" not in str(description) else f"Opération : ${description}$")
                     st.latex(sp.latex(matrice))
-                    
-                st.success("Calcul terminé ! La matrice inversée se trouve dans la partie droite de la matrice finale.")
+                st.success("Calcul terminé ! La matrice inversée se trouve dans la partie droite.")
                 succes = True
 
         elif choix.startswith("4"):
@@ -143,28 +136,19 @@ if st.button("Lancer le calcul"):
                 st.error("ERREUR : La matrice doit être carrée pour être diagonalisée.")
             else:
                 P, D, historique = diagonaliser_historique(M)
-                
                 for description, data in historique:
                     if isinstance(data, str) and description == "Erreur":
                         st.error(data)
                         break
-                    
-                    # Le bug est corrigé ici : on affiche tout sans condition restrictive
                     st.write(f"**{description}**")
                     st.latex(sp.latex(data))
-                            
                 if P is not None and D is not None:
                     st.success("Matrice diagonalisée avec succès !")
                     succes = True
 
-        # Si le calcul a fonctionné, on affiche le bouton magique pour le PDF
+        # SOLUTION FIABLE POUR LE PDF
         if succes:
-            st.divider()
-            st.markdown("""
-                <button onclick="window.print()" style="background-color:#2e7b32;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:16px;width:100%;">
-                🖨️ Sauvegarder en PDF
-                </button>
-            """, unsafe_allow_html=True)
+            st.info("🖨️ **Pour sauvegarder en PDF :** Fais simplement le raccourci `Ctrl + P` (ou `Cmd + P`). La page va se nettoyer toute seule pour l'impression !")
 
     except Exception as e:
         st.error(f"Erreur dans la saisie. Vérifiez vos nombres. (Détail : {e})")
