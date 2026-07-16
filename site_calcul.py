@@ -1,8 +1,22 @@
 import streamlit as st
 import sympy as sp
 
-# --- MOTEURS MATHÉMATIQUES ---
+# --- INTERFACE WEB STREAMLIT ---
+st.set_page_config(page_title="Solveur Insa", layout="centered")
 
+# --- OPTION B : NETTOYAGE POUR LE PDF ---
+# Ce code cache l'interface Streamlit au moment de l'impression
+st.markdown("""
+    <style>
+    @media print {
+        header, .stSelectbox, .stTextArea, .stButton, footer {
+            display: none !important;
+        }
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- MOTEURS MATHÉMATIQUES ---
 def gauss_jordan_historique(M):
     A = M.copy()
     lignes, colonnes = A.shape
@@ -72,13 +86,9 @@ def diagonaliser_historique(M):
     
     return P, D, etapes
 
-# --- INTERFACE WEB STREAMLIT ---
-
-st.set_page_config(page_title="Solveur Insa", layout="centered")
-
+# --- AFFICHAGE ---
 st.title("🧮 Solveur Automatique de Matrices")
 
-# Le menu de choix
 choix = st.selectbox(
     "Que souhaitez-vous faire ?",
     (
@@ -94,7 +104,6 @@ matrice_input = st.text_area("Votre matrice :", "1 2\n3 4")
 
 if st.button("Lancer le calcul"):
     try:
-        # 1. Lecture de la matrice
         lignes_texte = matrice_input.strip().split('\n')
         matrice_liste = [[sp.sympify(val) for val in ligne.split()] for ligne in lignes_texte]
         M = sp.Matrix(matrice_liste)
@@ -103,7 +112,8 @@ if st.button("Lancer le calcul"):
         st.divider()
         st.subheader("Étapes du calcul :")
         
-        # 2. Aiguillage selon le choix
+        succes = False
+        
         if choix.startswith("1") or choix.startswith("3"):
             M_reduite, historique = gauss_jordan_historique(M)
             
@@ -112,6 +122,7 @@ if st.button("Lancer le calcul"):
                 st.latex(sp.latex(matrice))
                 
             st.success("Calcul terminé avec succès !")
+            succes = True
 
         elif choix.startswith("2"):
             if lignes != colonnes:
@@ -125,6 +136,7 @@ if st.button("Lancer le calcul"):
                     st.latex(sp.latex(matrice))
                     
                 st.success("Calcul terminé ! La matrice inversée se trouve dans la partie droite de la matrice finale.")
+                succes = True
 
         elif choix.startswith("4"):
             if lignes != colonnes:
@@ -136,20 +148,26 @@ if st.button("Lancer le calcul"):
                     if isinstance(data, str) and description == "Erreur":
                         st.error(data)
                         break
-                        
-                    if isinstance(data, sp.Basic):
-                        if description == "Polynôme caractéristique":
-                            st.write(f"**{description}**")
-                            st.latex(sp.latex(data))
-                        else:
-                            st.write(f"**{description}**")
-                            st.latex(sp.latex(data))
+                    
+                    # Le bug est corrigé ici : on affiche tout sans condition restrictive
+                    st.write(f"**{description}**")
+                    st.latex(sp.latex(data))
                             
                 if P is not None and D is not None:
                     st.success("Matrice diagonalisée avec succès !")
+                    succes = True
+
+        # Si le calcul a fonctionné, on affiche le bouton magique pour le PDF
+        if succes:
+            st.divider()
+            st.markdown("""
+                <button onclick="window.print()" style="background-color:#2e7b32;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-size:16px;width:100%;">
+                🖨️ Sauvegarder en PDF
+                </button>
+            """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Erreur dans la saisie. Vérifiez vos nombres. (Détail : {e})")
 
-st.divider() 
+st.divider()
 st.caption("Développé par Evann Carpentier - INSA cvl")
