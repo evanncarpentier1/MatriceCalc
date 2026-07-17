@@ -138,7 +138,7 @@ if section.startswith("1"):
                 st.latex(sp.latex(M))
                 ker_vects = M.nullspace()
                 st.write("**Base du Noyau** $\\ker(A)$ **:**")
-                if not ker_vects: st.write("Réduit au vecteur nul $\\{0\\}$.")
+                if not ker_vects: st.write("Réduit au vecteur nul $\\{0\\}$. L'application est injective.")
                 else: st.latex(sp.latex(sp.Matrix.hstack(*ker_vects)))
                 im_vects = M.columnspace()
                 st.write("**Base de l'Image** $\\text{Im}(A)$ **:**")
@@ -202,29 +202,26 @@ elif section.startswith("3"):
     
     if st.button("Résoudre l'EDO"):
         try:
-            # 1. Remplacement temporaire pour éviter les conflits d'imbrication
             g_temp = eq_gauche.replace("y''", "D2").replace("y'", "D1").replace("y", "D0")
             d_temp = eq_droite.replace("y''", "D2").replace("y'", "D1").replace("y", "D0")
             
-            # 2. Écriture en syntaxe SymPy sécurisée
             g_str = g_temp.replace("D2", "Derivative(YFUNC(x), (x, 2))").replace("D1", "Derivative(YFUNC(x), x)").replace("D0", "YFUNC(x)")
             d_str = d_temp.replace("D2", "Derivative(YFUNC(x), (x, 2))").replace("D1", "Derivative(YFUNC(x), x)").replace("D0", "YFUNC(x)")
             
-            # 3. Interprétation en isolant proprement la fonction
             locs = {"YFUNC": sp.Function('y')}
             expr_gauche = sp.sympify(g_str, locals=locs)
             expr_droite = sp.sympify(d_str, locals=locs)
             
             eq = sp.Eq(expr_gauche, expr_droite)
             st.divider()
+            st.write("**Équation interprétée :**")
             st.latex(sp.latex(eq))
+            st.write("**Solution générale :**")
             st.latex(sp.latex(sp.dsolve(eq)))
-        except Exception as e: 
-            st.error(f"Erreur de syntaxe : {e}")
-
+        except Exception as e: st.error(f"Erreur de syntaxe : {e}")
 
 # ==========================================
-# SECTION 4 : GÉOMÉTRIE (Coniques)
+# SECTION 4 : GÉOMÉTRIE (Coniques avec détails)
 # ==========================================
 elif section.startswith("4"):
     st.title("📐 Géométrie (Coniques)")
@@ -233,15 +230,47 @@ elif section.startswith("4"):
         try:
             expr = sp.sympify(eq_input)
             st.divider()
-            a, b, c = sp.diff(expr, x, 2)/2, sp.diff(expr, x, y)/2, sp.diff(expr, y, 2)/2
+            
+            st.write("**1. Équation de départ :**")
+            st.latex(f"P(x, y) = {sp.latex(expr)} = 0")
+
+            st.write("**2. Calcul des dérivées partielles secondes :**")
+            dx2 = sp.diff(expr, x, 2)
+            dy2 = sp.diff(expr, y, 2)
+            dxy = sp.diff(expr, x, y)
+            
+            st.latex(f"\\frac{{\\partial^2 P}}{{\\partial x^2}} = {sp.latex(dx2)} \\implies a = {sp.latex(dx2/2)}")
+            st.latex(f"\\frac{{\\partial^2 P}}{{\\partial y^2}} = {sp.latex(dy2)} \\implies c = {sp.latex(dy2/2)}")
+            st.latex(f"\\frac{{\\partial^2 P}}{{\\partial x \\partial y}} = {sp.latex(dxy)} \\implies b = {sp.latex(dxy/2)}")
+
+            a, b, c = dx2/2, dxy/2, dy2/2
             A = sp.Matrix([[a, b], [b, c]])
             det_A = A.det()
+            
+            st.write("**3. Matrice de la forme quadratique et Déterminant :**")
+            st.latex(f"A = {sp.latex(A)}")
+            st.latex(f"\\det(A) = ({sp.latex(a)}) \\times ({sp.latex(c)}) - ({sp.latex(b)})^2 = {sp.latex(det_A)}")
+            
             nature = "Ellipse" if det_A > 0 else "Hyperbole" if det_A < 0 else "Parabole"
-            st.write(f"**Nature :** {nature} ($\\det(A) = {sp.latex(det_A)}$)")
+            st.write(f"**Conclusion :** Le déterminant est {'strictement positif' if det_A > 0 else 'strictement négatif' if det_A < 0 else 'nul'}, il s'agit donc d'une forme de type **{nature}**.")
+
             if det_A != 0:
-                centre = sp.solve((sp.Eq(sp.diff(expr, x), 0), sp.Eq(sp.diff(expr, y), 0)), (x, y))
-                if centre: st.latex(f"\\text{{Centre }} \\Omega \\left( {sp.latex(centre[x])}, {sp.latex(centre[y])} \\right)")
-            for vp in A.eigenvals(): st.latex(f"\\lambda = {sp.latex(vp)}")
+                st.write("**4. Recherche du centre $\\Omega$ (Annulation du gradient) :**")
+                dx = sp.diff(expr, x)
+                dy = sp.diff(expr, y)
+                st.latex(f"\\frac{{\\partial P}}{{\\partial x}} = {sp.latex(dx)} = 0")
+                st.latex(f"\\frac{{\\partial P}}{{\\partial y}} = {sp.latex(dy)} = 0")
+                centre = sp.solve((sp.Eq(dx, 0), sp.Eq(dy, 0)), (x, y))
+                if centre: 
+                    st.latex(f"\\Omega \\left( {sp.latex(centre[x])}, {sp.latex(centre[y])} \\right)")
+
+            st.write("**5. Valeurs propres $\\lambda$ (Signature géométrique) :**")
+            lam = sp.Symbol('\\lambda')
+            poly = A.charpoly(lam)
+            st.latex(f"\\det(A - \\lambda I) = {sp.latex(poly.as_expr())} = 0")
+            for vp in A.eigenvals(): 
+                st.latex(f"\\lambda = {sp.latex(vp)}")
+                
         except Exception as e: st.error(f"Erreur : {e}")
 
 # ==========================================
@@ -250,21 +279,37 @@ elif section.startswith("4"):
 elif section.startswith("5"):
     st.title("⚡ Nombres Complexes")
     choix_complexe = st.selectbox("Calcul :", ["Analyse (Module, Arg)", "Racines n-ièmes", "Équation complexe", "Impédance équivalente"])
+    
     if choix_complexe.startswith("Analyse") or choix_complexe.startswith("Racines"):
         z_input = st.text_input("Complexe $z$ (i ou j) :", "1 + i")
         n_racines = st.number_input("Ordre n :", value=3) if choix_complexe.startswith("Racines") else None
+        
         if st.button("Calculer"):
             try:
                 Z = sp.sympify(z_input.replace('i', 'I').replace('j', 'I'))
                 st.divider()
+                st.write("**Nombre $z$ saisi :**")
                 st.latex(f"z = {sp.latex(Z)}")
+                
+                mod, arg = sp.simplify(sp.Abs(Z)), sp.simplify(sp.arg(Z))
+                
                 if choix_complexe.startswith("Analyse"):
-                    mod, arg = sp.simplify(sp.Abs(Z)), sp.simplify(sp.arg(Z))
+                    st.write("**1. Calcul du Module :**")
+                    st.latex(f"|z| = \\sqrt{{\\text{{Re}}(z)^2 + \\text{{Im}}(z)^2}} = {sp.latex(mod)}")
+                    
+                    st.write("**2. Calcul de l'Argument principal :**")
+                    st.latex(f"\\arg(z) = {sp.latex(arg)} \\pmod{{2\\pi}}")
+                    
+                    st.write("**3. Forme exponentielle finale :**")
                     st.latex(f"z = {sp.latex(mod)} e^{{i \\left({sp.latex(arg)}\\right)}}")
                 else:
+                    st.write(f"**Formule des racines {n_racines}-ièmes :**")
+                    st.latex(f"z_k = \\sqrt[{n_racines}]{{{sp.latex(mod)}}} e^{{i \\frac{{{sp.latex(arg)} + 2k\\pi}}{{{n_racines}}}}}")
+                    st.write("**Résultats simplifiés :**")
                     for idx, r in enumerate(sp.solve(x**n_racines - Z, x)):
                         st.latex(f"z_{idx} = {sp.latex(sp.simplify(r))}")
             except Exception as e: st.error(f"Erreur : {e}")
+            
     elif choix_complexe.startswith("Équation"):
         eq_input = st.text_input("Équation (ex: z**2 + z + 1 = 0) :", "z**2 + (1+i)*z - 2")
         if st.button("Résoudre"):
@@ -272,8 +317,12 @@ elif section.startswith("5"):
                 eq_c = eq_input.replace('i', 'I').replace('j', 'I')
                 expr = sp.sympify(eq_c.split("=")[0]) - sp.sympify(eq_c.split("=")[1]) if "=" in eq_c else sp.sympify(eq_c)
                 st.divider()
+                st.write("**Équation traitée :**")
+                st.latex(f"{sp.latex(expr)} = 0")
+                st.write("**Solutions :**")
                 for sol in sp.solve(expr, z): st.latex(f"z = {sp.latex(sp.simplify(sol))}")
             except Exception as e: st.error(f"Erreur : {e}")
+            
     elif choix_complexe.startswith("Impédance"):
         type_asso = st.radio("Association :", ["Série", "Parallèle"])
         z_list = st.text_area("Impédances (séparées par des virgules) :", "100, 50*i")
@@ -281,7 +330,16 @@ elif section.startswith("5"):
             try:
                 imps = [sp.sympify(i.strip().replace('i', 'I').replace('j', 'I')) for i in z_list.split(',')]
                 st.divider()
-                Z_eq = sum(imps) if type_asso == "Série" else 1 / sum([1/i for i in imps])
+                if type_asso == "Série":
+                    st.write("**Somme des impédances (Série) :**")
+                    st.latex(f"Z_{{eq}} = " + " + ".join([sp.latex(i) for i in imps]))
+                    Z_eq = sum(imps)
+                else:
+                    st.write("**Somme des admittances (Parallèle) :**")
+                    st.latex(f"\\frac{{1}}{{Z_{{eq}}}} = " + " + ".join([f"\\frac{{1}}{{{sp.latex(i)}}}" for i in imps]))
+                    Z_eq = 1 / sum([1/i for i in imps])
+                
+                st.write("**Impédance équivalente finale :**")
                 st.latex(f"Z_{{eq}} = {sp.latex(sp.simplify(Z_eq))}")
             except Exception as e: st.error(f"Erreur : {e}")
 
@@ -300,10 +358,8 @@ elif section.startswith("6"):
 
     if st.button("Calculer la Transformée"):
         try:
-            # CORRECTION : On force sympify à utiliser les variables 'réelles' du script
             locs = {"t": t, "p": p, "w": w}
             expr = sp.sympify(func_str, locals=locs)
-            
             st.divider()
             if "Laplace" in choix_transfo and "Inverse" not in choix_transfo:
                 st.latex(f"\\mathcal{{L}}\\{{{sp.latex(expr)}\\}}(p) = {sp.latex(sp.laplace_transform(expr, t, p, noconds=True))}")
@@ -313,12 +369,10 @@ elif section.startswith("6"):
                 st.latex(f"\\mathcal{{F}}\\{{{sp.latex(expr)}\\}}(w) = {sp.latex(sp.fourier_transform(expr, t, w))}")
             elif "Fourier Inverse" in choix_transfo:
                 st.latex(f"\\mathcal{{F}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(sp.inverse_fourier_transform(expr, w, t))}")
-        except Exception as e: 
-            st.error(f"Erreur : {e}")
-
+        except Exception as e: st.error(f"Erreur : {e}")
 
 # ==========================================
-# SECTION 7 : CALCUL VECTORIEL
+# SECTION 7 : CALCUL VECTORIEL (Avec détails)
 # ==========================================
 elif section.startswith("7"):
     st.title("🧭 Calcul Vectoriel")
@@ -329,9 +383,15 @@ elif section.startswith("7"):
         if st.button("Calculer le Gradient"):
             try:
                 f = sp.sympify(f_str)
-                grad = [sp.diff(f, x), sp.diff(f, y), sp.diff(f, z)]
                 st.divider()
-                st.latex(sp.latex(sp.Matrix(grad)))
+                st.write("**1. Calcul des dérivées partielles :**")
+                dx, dy, dz = sp.diff(f, x), sp.diff(f, y), sp.diff(f, z)
+                st.latex(f"\\frac{{\\partial f}}{{\\partial x}} = {sp.latex(dx)}")
+                st.latex(f"\\frac{{\\partial f}}{{\\partial y}} = {sp.latex(dy)}")
+                st.latex(f"\\frac{{\\partial f}}{{\\partial z}} = {sp.latex(dz)}")
+                
+                st.write("**2. Vecteur Gradient final :**")
+                st.latex(sp.latex(sp.Matrix([dx, dy, dz])))
             except Exception as e: st.error(f"Erreur : {e}")
     else:
         c1, c2, c3 = st.columns(3)
@@ -342,16 +402,27 @@ elif section.startswith("7"):
             try:
                 Vx, Vy, Vz = sp.sympify(vx_str), sp.sympify(vy_str), sp.sympify(vz_str)
                 st.divider()
+                
                 if "Divergence" in choix_vect:
-                    div = sp.diff(Vx, x) + sp.diff(Vy, y) + sp.diff(Vz, z)
-                    st.latex(sp.latex(div))
+                    st.write("**1. Calcul des dérivées partielles directes :**")
+                    dx, dy, dz = sp.diff(Vx, x), sp.diff(Vy, y), sp.diff(Vz, z)
+                    st.latex(f"\\frac{{\\partial V_x}}{{\\partial x}} = {sp.latex(dx)}, \\quad \\frac{{\\partial V_y}}{{\\partial y}} = {sp.latex(dy)}, \\quad \\frac{{\\partial V_z}}{{\\partial z}} = {sp.latex(dz)}")
+                    st.write("**2. Divergence (Somme) :**")
+                    st.latex(f"\\vec{{\\nabla}} \\cdot \\vec{{V}} = {sp.latex(dx + dy + dz)}")
                 else:
-                    rot_x, rot_y, rot_z = sp.diff(Vz, y) - sp.diff(Vy, z), sp.diff(Vx, z) - sp.diff(Vz, x), sp.diff(Vy, x) - sp.diff(Vx, y)
+                    st.write("**1. Calcul des composantes croisées :**")
+                    rot_x = sp.diff(Vz, y) - sp.diff(Vy, z)
+                    rot_y = sp.diff(Vx, z) - sp.diff(Vz, x)
+                    rot_z = sp.diff(Vy, x) - sp.diff(Vx, y)
+                    st.latex(f"\\vec{{u}}_x : \\frac{{\\partial V_z}}{{\\partial y}} - \\frac{{\\partial V_y}}{{\\partial z}} = {sp.latex(rot_x)}")
+                    st.latex(f"\\vec{{u}}_y : \\frac{{\\partial V_x}}{{\\partial z}} - \\frac{{\\partial V_z}}{{\\partial x}} = {sp.latex(rot_y)}")
+                    st.latex(f"\\vec{{u}}_z : \\frac{{\\partial V_y}}{{\\partial x}} - \\frac{{\\partial V_x}}{{\\partial y}} = {sp.latex(rot_z)}")
+                    st.write("**2. Vecteur Rotationnel final :**")
                     st.latex(sp.latex(sp.Matrix([rot_x, rot_y, rot_z])))
             except Exception as e: st.error(f"Erreur : {e}")
 
 # ==========================================
-# SECTION 8 : SÉRIES NUMÉRIQUES
+# SECTION 8 : SÉRIES NUMÉRIQUES (Avec détails)
 # ==========================================
 elif section.startswith("8"):
     st.title("♾️ Séries Numériques")
@@ -361,26 +432,24 @@ elif section.startswith("8"):
     
     if st.button("Calculer la Somme"):
         try:
-            # On traduit le ^ en ** pour que la syntaxe calculatrice fonctionne
             un_clean = un_str.replace('^', '**')
-            
-            # CORRECTION : On force sympify à utiliser le 'n' entier global du script
             locs = {"n": n}
             un = sp.sympify(un_clean, locals=locs)
-            
             st.divider()
             
-            somme_formelle = sp.Sum(un, (n, int(n0_str), sp.oo))
+            st.write("**1. Évaluation des premiers termes :**")
+            n0 = int(n0_str)
+            termes = [sp.simplify(un.subs(n, n0 + i)) for i in range(3)]
+            st.latex(f"u_{{{n0}}} = {sp.latex(termes[0])}, \\quad u_{{{n0+1}}} = {sp.latex(termes[1])}, \\quad u_{{{n0+2}}} = {sp.latex(termes[2])}")
+            st.latex(f"\\sum = {sp.latex(termes[0])} + {sp.latex(termes[1])} + {sp.latex(termes[2])} + \\dots")
+            
+            st.write("**2. Résultat de la série formelle :**")
+            somme_formelle = sp.Sum(un, (n, n0, sp.oo))
             resultat = somme_formelle.doit()
+            st.latex(f"\\sum_{{n={n0}}}^\\infty {sp.latex(un)} = {sp.latex(resultat)}")
             
-            st.latex(f"\\sum_{{n={n0_str}}}^\\infty {sp.latex(un)} = {sp.latex(resultat)}")
-            
-            if "Sum" in str(resultat): 
-                st.warning("⚠️ SymPy n'a pas pu évaluer cette somme (divergence possible).")
-                
-        except Exception as e: 
-            st.error(f"Erreur : {e}")
-
+            if "Sum" in str(resultat): st.warning("⚠️ SymPy n'a pas pu évaluer cette somme (divergence possible ou pas de forme close connue).")
+        except Exception as e: st.error(f"Erreur : {e}")
 
 # ==========================================
 # SECTION 9 : PROBABILITÉS & STATS
@@ -406,15 +475,19 @@ elif section.startswith("9"):
             st.divider()
             if loi.startswith("1"):
                 X = sp_stats.Normal('X', sp.sympify(params['mu']), sp.sympify(params['sigma']))
+                st.write("**Loi Normale :** Densité $f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{1}{2}(\\frac{x-\\mu}{\\sigma})^2}$")
                 st.latex(f"f(x) = {sp.latex(sp_stats.density(X)(x))}")
             elif loi.startswith("2"):
                 X = sp_stats.Exponential('X', sp.sympify(params['lambda']))
+                st.write("**Loi Exponentielle :** Densité $f(x) = \\lambda e^{-\\lambda x}$")
                 st.latex(f"f(x) = {sp.latex(sp_stats.density(X)(x))}")
             elif loi.startswith("3"):
                 X = sp_stats.Binomial('X', sp.sympify(params['n']), sp.sympify(params['p']))
+                st.write("**Loi Binomiale :** $P(X=k) = \\binom{n}{k} p^k (1-p)^{n-k}$")
                 st.latex(f"P(X = k) = {sp.latex(sp_stats.density(X)(k))}")
             elif loi.startswith("4"):
                 X = sp_stats.Poisson('X', sp.sympify(params['lambda']))
+                st.write("**Loi de Poisson :** $P(X=k) = \\frac{\\lambda^k}{k!} e^{-\\lambda}$")
                 st.latex(f"P(X = k) = {sp.latex(sp_stats.density(X)(k))}")
             
             st.write("**Propriétés de la Variable Aléatoire $X$ :**")
@@ -425,4 +498,3 @@ elif section.startswith("9"):
 
 st.sidebar.divider()
 st.sidebar.caption("Développé par Evann Carpentier - INSA cvl")
-            
