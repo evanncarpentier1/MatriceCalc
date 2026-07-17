@@ -351,18 +351,31 @@ elif section.startswith("7"):
 elif section.startswith("8"):
     st.title("♾️ Séries Numériques")
     col1, col2 = st.columns([3, 1])
-    un_str = col1.text_input("Terme général $u_n$ :", "1 / n**2")
-    n0_str = col2.number_input("Indice de départ $n_0$ :", value=1)
+    un_str = col1.text_input("Terme général $u_n$ :", "2 * (3/4)^n")
+    n0_str = col2.number_input("Indice de départ $n_0$ :", value=0)
     
     if st.button("Calculer la Somme"):
         try:
-            un = sp.sympify(un_str)
+            # On traduit le ^ en ** pour que la syntaxe calculatrice fonctionne
+            un_clean = un_str.replace('^', '**')
+            
+            # CORRECTION : On force sympify à utiliser le 'n' entier global du script
+            locs = {"n": n}
+            un = sp.sympify(un_clean, locals=locs)
+            
             st.divider()
+            
             somme_formelle = sp.Sum(un, (n, int(n0_str), sp.oo))
             resultat = somme_formelle.doit()
+            
             st.latex(f"\\sum_{{n={n0_str}}}^\\infty {sp.latex(un)} = {sp.latex(resultat)}")
-            if "Sum" in str(resultat): st.warning("⚠️ SymPy n'a pas pu évaluer cette somme (divergence possible).")
-        except Exception as e: st.error(f"Erreur : {e}")
+            
+            if "Sum" in str(resultat): 
+                st.warning("⚠️ SymPy n'a pas pu évaluer cette somme (divergence possible).")
+                
+        except Exception as e: 
+            st.error(f"Erreur : {e}")
+
 
 # ==========================================
 # SECTION 9 : PROBABILITÉS & STATS
