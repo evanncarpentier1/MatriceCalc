@@ -1,2 +1,2 @@
-# MatriceCalc
-Calculateur basique pour matrices + génération pdf LaTex
+# Matrice&Calc
+Calculateur pour matrices et algèbre linéaire 
