@@ -300,7 +300,10 @@ elif section.startswith("6"):
 
     if st.button("Calculer la Transformée"):
         try:
-            expr = sp.sympify(func_str)
+            # CORRECTION : On force sympify à utiliser les variables 'réelles' du script
+            locs = {"t": t, "p": p, "w": w}
+            expr = sp.sympify(func_str, locals=locs)
+            
             st.divider()
             if "Laplace" in choix_transfo and "Inverse" not in choix_transfo:
                 st.latex(f"\\mathcal{{L}}\\{{{sp.latex(expr)}\\}}(p) = {sp.latex(sp.laplace_transform(expr, t, p, noconds=True))}")
@@ -310,7 +313,9 @@ elif section.startswith("6"):
                 st.latex(f"\\mathcal{{F}}\\{{{sp.latex(expr)}\\}}(w) = {sp.latex(sp.fourier_transform(expr, t, w))}")
             elif "Fourier Inverse" in choix_transfo:
                 st.latex(f"\\mathcal{{F}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(sp.inverse_fourier_transform(expr, w, t))}")
-        except Exception as e: st.error(f"Erreur : {e}")
+        except Exception as e: 
+            st.error(f"Erreur : {e}")
+
 
 # ==========================================
 # SECTION 7 : CALCUL VECTORIEL
