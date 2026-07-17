@@ -354,22 +354,50 @@ elif section.startswith("6"):
         func_str = st.text_input("Fonction temporelle $f(t)$ :", "exp(-2*t) * Heaviside(t)")
     else:
         var = "p" if "Laplace" in choix_transfo else "w"
-        func_str = st.text_input(f"Fonction fréquentielle $F({var})$ :", f"1 / ({var} + 2)")
+        placeholder = "1 / (p + 2)" if var == "p" else "1 / (2 + i*w)"
+        func_str = st.text_input(f"Fonction fréquentielle $F({var})$ :", placeholder)
 
     if st.button("Calculer la Transformée"):
         try:
+            # Tolérance pour i, j et la puissance ^ (très important pour ta syntaxe !)
+            func_clean = func_str.replace('i', 'I').replace('j', 'I').replace('^', '**')
+            
             locs = {"t": t, "p": p, "w": w}
-            expr = sp.sympify(func_str, locals=locs)
+            expr = sp.sympify(func_clean, locals=locs)
             st.divider()
+            
             if "Laplace" in choix_transfo and "Inverse" not in choix_transfo:
-                st.latex(f"\\mathcal{{L}}\\{{{sp.latex(expr)}\\}}(p) = {sp.latex(sp.laplace_transform(expr, t, p, noconds=True))}")
+                res = sp.laplace_transform(expr, t, p, noconds=True)
+                st.latex(f"\\mathcal{{L}}\\{{{sp.latex(expr)}\\}}(p) = {sp.latex(res)}")
+                
             elif "Laplace Inverse" in choix_transfo:
-                st.latex(f"\\mathcal{{L}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(sp.inverse_laplace_transform(expr, p, t))}")
+                res = sp.inverse_laplace_transform(expr, p, t)
+                st.latex(f"\\mathcal{{L}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(res)}")
+                
             elif "Fourier" in choix_transfo and "Inverse" not in choix_transfo:
-                st.latex(f"\\mathcal{{F}}\\{{{sp.latex(expr)}\\}}(w) = {sp.latex(sp.fourier_transform(expr, t, w))}")
+                res = sp.fourier_transform(expr, t, w)
+                st.latex(f"\\mathcal{{F}}\\{{{sp.latex(expr)}\\}}(w) = {sp.latex(res)}")
+                
             elif "Fourier Inverse" in choix_transfo:
-                st.latex(f"\\mathcal{{F}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(sp.inverse_fourier_transform(expr, w, t))}")
-        except Exception as e: st.error(f"Erreur : {e}")
+                res = sp.inverse_fourier_transform(expr, w, t)
+                
+                # LE CHEAT CODE : Si SymPy plante (renvoie 0 ou ne calcule pas)
+                if res == 0 or "Fourier" in str(res):
+                    
+                    # On substitue 2*pi*j*w (maths) ou j*w (physique) par p pour forcer Laplace
+                    expr_laplace = expr.subs(2 * sp.pi * sp.I * w, p).subs(sp.I * w, p)
+                    res_laplace = sp.inverse_laplace_transform(expr_laplace, p, t)
+                    
+                    # Si Laplace a réussi son coup, on écrase le faux résultat
+                    if "Laplace" not in str(res_laplace) and res_laplace != 0:
+                        res = res_laplace
+                        st.info("💡 **Astuce du solveur :** L'algorithme standard ayant échoué, le résultat a été déduit formellement via l'équivalence avec Laplace ($p = j\\omega$).")
+                        
+                st.latex(f"\\mathcal{{F}}^{{-1}}\\{{{sp.latex(expr)}\\}}(t) = {sp.latex(res)}")
+                
+        except Exception as e: 
+            st.error(f"Erreur de syntaxe. (Détail : {e})")
+
 
 # ==========================================
 # SECTION 7 : CALCUL VECTORIEL (Avec détails)
