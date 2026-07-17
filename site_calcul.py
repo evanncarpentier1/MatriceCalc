@@ -202,11 +202,16 @@ elif section.startswith("3"):
     
     if st.button("Résoudre l'EDO"):
         try:
-            g_str = eq_gauche.replace("y''", "Derivative(y(x), (x, 2))").replace("y'", "Derivative(y(x), x)").replace("y", "y(x)")
-            d_str = eq_droite.replace("y''", "Derivative(y(x), (x, 2))").replace("y'", "Derivative(y(x), x)").replace("y", "y(x)")
+            # 1. Remplacement temporaire pour éviter les conflits d'imbrication
+            g_temp = eq_gauche.replace("y''", "D2").replace("y'", "D1").replace("y", "D0")
+            d_temp = eq_droite.replace("y''", "D2").replace("y'", "D1").replace("y", "D0")
             
-            # CORRECTION DU BUG : On force SymPy à considérer 'y' comme une fonction localement
-            locs = {"y": sp.Function('y')}
+            # 2. Écriture en syntaxe SymPy sécurisée
+            g_str = g_temp.replace("D2", "Derivative(YFUNC(x), (x, 2))").replace("D1", "Derivative(YFUNC(x), x)").replace("D0", "YFUNC(x)")
+            d_str = d_temp.replace("D2", "Derivative(YFUNC(x), (x, 2))").replace("D1", "Derivative(YFUNC(x), x)").replace("D0", "YFUNC(x)")
+            
+            # 3. Interprétation en isolant proprement la fonction
+            locs = {"YFUNC": sp.Function('y')}
             expr_gauche = sp.sympify(g_str, locals=locs)
             expr_droite = sp.sympify(d_str, locals=locs)
             
@@ -214,7 +219,9 @@ elif section.startswith("3"):
             st.divider()
             st.latex(sp.latex(eq))
             st.latex(sp.latex(sp.dsolve(eq)))
-        except Exception as e: st.error(f"Erreur de syntaxe : {e}")
+        except Exception as e: 
+            st.error(f"Erreur de syntaxe : {e}")
+
 
 # ==========================================
 # SECTION 4 : GÉOMÉTRIE (Coniques)
